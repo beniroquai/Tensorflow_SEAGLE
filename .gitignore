@@ -1,0 +1,8 @@
+# avoid uploading big files
+*.mat
+
+# random files
+*.pyc
+.DS_Store
+
+
