@@ -24,14 +24,15 @@ def tf_abssqr(inputar):
     #return tf.abs(inputar)**2
 
 def rr(inputsize_x=100, inputsize_y=100, inputsize_z=100, x_center=0, y_center = 0, z_center=0):
-    x = np.arange(-inputsize_x/2,inputsize_x/2, 1)
-    y = np.arange(-inputsize_y/2,inputsize_y/2, 1)
+    x = np.linspace(-inputsize_x/2,inputsize_x/2, inputsize_x)
+    y = np.linspace(-inputsize_y/2,inputsize_y/2, inputsize_y)
+
     if inputsize_z<=1:
         xx, yy = np.meshgrid(x+x_center, y+y_center)
         r = np.sqrt(xx**2+yy**2)
         r = np.transpose(r, [1, 0]) #???? why that?!
     else:
-        z = np.arange(-inputsize_z/2,inputsize_z/2, 1)
+        z = np.linspace(-inputsize_z/2,inputsize_z/2, inputsize_z)
         xx, yy, zz = np.meshgrid(x+x_center, y+y_center, z+z_center)
         xx, yy, zz = np.meshgrid(x, y, z)
         r = np.sqrt(xx**2+yy**2+zz**2)
@@ -375,65 +376,35 @@ class SEAGLE:
     '''
     
     # initialize the SEAGLE operator
-    def __init__(self, mysample, mySrc, lambda0=.6, pixelsize=.15, nObj = 1.45, nEmbb=1.33, Boundary=10):
+    showupdate = 10
+    
+    def __init__(self, mysample, mySrc, mysample_embb=1.33, k0=None, startPsi=None, showupdate=10):
     
         # initialize Class instance
+        self.showupdate = showupdate
+        self.mysample = mysample
         self.mySrc = mySrc
-        self.nEmbb = nEmbb
-        self.nObj = nObj        
-
+        self.mysample_embb = mysample_embb
+        self.startPsi = startPsi 
+        
         # INternal step counter 
+        self.step_counter = 0
+        self.nsteps = 1
         self.logs_path = './tensorflow_logs/'
         
         # Get the sizes 
         self.mysize_old = mysample.shape
         self.mysize_new = 2*np.array(mysample.shape)
         
+
         # Define Wavenumber
         self.lambda0 = lambda0
         self.pixelsize = pixelsize
-        
-        # Compute wave-number in medium
-        self.k0 = 2*np.pi/self.lambda0;
-        self.kb = 2*np.pi/self.lambda0*self.nEmbb
-        self.k02 = self.k0**2
-        self.kr=(self.pixelsize)*rr(self.mysize_old[0], self.mysize_old[1], self.mysize_old[2])
-
-        # compile the object into the real-world (how much phase retardation)
-        self.f = (self.k02)*((self.nObj-self.nEmbb)*mysample)+0j
-        
-        # We need to insert the perfect-aborber boundeary condition allong to prevent reflection at th edges
-        if(Boundary>0):
-            self.f, _ = insertPerfectAbsorber(self.f, 0, Boundary, -1, self.k0);
-            self.f, _ = insertPerfectAbsorber(self.f, self.f.shape[0] - Boundary, Boundary, 1, self.k0);
-
-
-        #%---------------------------------------------------------------------
-        #                  START CODE HERE                                    #
-        #%---------------------------------------------------------------------
-       
-        # First we need to pad our volume to get rid of reflection/wrap arounds
-        if(False):
-            self.mysample = extract3D(self.mysample, newsize = self.mysize_new)
-            self.mySrc = extract3D(self.mySrc, newsize = self.mysize_new)
-            self.myMask = extract3D(np.ones(self.mySrc.shape), newsize = self.mysize_new)>.5
-
-        # Compute Greensfunction
-        print('Now computing Greens function and its fourier transformed')
-        self.greens_fkt = np.exp((1j*self.kb)*np.abs(self.kr))/np.abs(4*np.pi*self.kr)
-
-        #self.greens_fkt = np.exp((1j*2*np.pi)*mykr) / np.abs(2*np.pi*mykr)
-        mycenter = [int(self.mysize_old[0]/2), int(self.mysize_old[1]/2), int(self.mysize_old[2]/2)]
-        self.greens_fkt[mycenter[0], mycenter[1], mycenter[2]]=1.0/np.sqrt(2) # Normalize, Make sure to not divide by zero
-
-        # Compute Green's Function in Frequency Space
-        Fac=.015;  # What is the correct factor and why?
-        print('# What is the correct factor and why?')
-        self.greens_fkt_ft = my_ft3d_np(self.greens_fkt * Fac)
-
-        # Compute the pump field inside the volume
-        self.u_in = my_ift3d_np(my_ft3d_np(self.mySrc) * self.greens_fkt_ft)
-            
+        if k0 == None:
+            k0=0.25/np.max(np.real(mysample));
+        else:
+            self.k0=k0
+        self.k02 = self.k0**2;
 
     def computeModel(self):
         # Open a new session object 
@@ -459,8 +430,37 @@ class SEAGLE:
             self.sess = tf.Session(config=config)
                 
         
-         
+        #%---------------------------------------------------------------------
+        #                  START CODE HERE                                    #
+        #%---------------------------------------------------------------------
         
+        # First we need to pad our volume to get rid of reflection/wrap arounds
+        if(False):
+            self.mysample = extract3D(self.mysample, newsize = self.mysize_new)
+            self.mySrc = extract3D(self.mySrc, newsize = self.mysize_new)
+            self.myMask = extract3D(np.ones(self.mySrc.shape), newsize = self.mysize_new)>.5
+
+        # get the scattering potential f=k0^2*(epsillon(r) - epsillon_embb)
+        if(False):
+            f_obj = self.k02*(self.mysample-self.mysample_embb)
+            print('Doubble check the sample preparation, maybe false scattering potential!')
+        else:
+            f_obj = mysample#self.k02*(self.mysample)
+        
+        # Compute Greensfunction
+        print('Now computing Greens function and its fourier transformed')
+        mykr=self.k0 * rr(self.mysample.shape[0], self.mysample.shape[1], self.mysample.shape[2])
+        self.greens_fkt = np.exp((1j*2*np.pi)*mykr) / np.abs(2*np.pi*mykr)
+        mycenter = [int(self.mysample.shape[0]/2), int(self.mysample.shape[1]/2), int(self.mysample.shape[2]/2)]
+        self.greens_fkt[mycenter[0], mycenter[1], mycenter[2]]=1.0/np.sqrt(2)
+
+        # Compute Green's Function in Frequency Space
+        Fac=5;  # What is the correct factor and why?
+        self.greens_fkt_ft = my_ft3d_np(self.greens_fkt * Fac)
+
+        # Compute the pump field inside the volume
+        self.u_in = my_ift3d_np(my_ft3d_np(self.mySrc) * self.greens_fkt_ft)
+            
         #%---------------------------------------------------------------------
         #                  START TENSORFLOW STUFF HERE                        #
         #%---------------------------------------------------------------------
@@ -469,7 +469,7 @@ class SEAGLE:
         self.tf_mySrc = tf.constant(np.squeeze(self.mySrc), tf.complex64)
         self.tf_greens_fkt_ft = tf.constant(np.squeeze(self.greens_fkt_ft))
         self.tf_greens_fkt_ft = tf.cast(self.tf_greens_fkt_ft, tf.complex64)
-        self.tf_f_obj = tf.constant(np.squeeze(self.f), tf.complex64)
+        self.tf_f_obj = tf.constant(np.squeeze(f_obj), tf.complex64)
         self.tf_u_in = tf.constant(self.u_in, tf.complex64)
         # self.myMask = tf.constant(self.myMask)
         
