@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-
-# performs a 2D simulation, assuming cylinder symmertry along Z
-
+# author: Benedict Diederich 2018
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,7 +8,6 @@ import scipy.io
 import scipy as scipy
 import SEAGLE as seagle
 import time
-
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
@@ -33,13 +30,13 @@ def save(filename, numpyarray):
 # Define some parameters
 is_debug = True # do you want to display everything?
 learningrate = .001 
-Niter = 30 # Optimization Steps
+Niter = 40 # Optimization Steps
 
-mysize = (100, 100, 100) # X Y Z
+mysize = (100, 100, 100) # Z X Y
 mymidpoint = int(mysize[1]/2)
 mysample = np.zeros(mysize)
 
-nObj = 1.45
+nObj = 1.4
 nEmbb = 1.33
 #nObj = 1.52 + 0.0 * 1j;
 Boundary=9;
