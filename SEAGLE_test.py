@@ -17,11 +17,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # %reload_ext autoreload
 
 
-def save(filename, numpyarray):
-    import scipy.io
-    data = {}
-    data['numpyarray'] = numpyarray
-    scipy.io.savemat(filename, mdict=data)
 
 #%---------------------------------------------------------------------
 #                  START CODE HERE                                    #
@@ -29,7 +24,7 @@ def save(filename, numpyarray):
        
 # Define some parameters
 is_debug = True # do you want to display everything?
-learningrate = .001 
+learningrate = .1 
 Niter = 40 # Optimization Steps
 
 mysize = (100, 100, 100) # Z X Y
