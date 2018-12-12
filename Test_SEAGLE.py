@@ -25,7 +25,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # Define some parameters
 is_debug = True # do you want to display everything?
 learningrate = .1 
-Niter = 40 # Optimization Steps
+Niter = 20 # Optimization Steps
 
 mysize = (100, 100, 100) # Z X Y
 mymidpoint = int(mysize[1]/2)
@@ -96,6 +96,7 @@ for i in range(Niter):
         plt.subplot(1,2,2), plt.title('Phase of PSI X/Z Plot')
         plt.imshow(np.squeeze(np.angle(MySEAGLE.tf_u.eval()[:,mymidpoint,:])), cmap='gray'), plt.colorbar()
         plt.show()
+
 
 
 

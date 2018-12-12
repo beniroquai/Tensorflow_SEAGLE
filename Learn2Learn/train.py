@@ -32,85 +32,79 @@ flags = tf.flags
 logging = tf.logging
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string("save_path", None, "Path for saved meta-optimizer.")
-flags.DEFINE_integer("num_epochs", 10000, "Number of training epochs.")
-flags.DEFINE_integer("log_period", 100, "Log period.")
-flags.DEFINE_integer("evaluation_period", 1000, "Evaluation period.")
-flags.DEFINE_integer("evaluation_epochs", 20, "Number of evaluation epochs.")
-
-flags.DEFINE_string("problem", "simple", "Type of problem.")
-flags.DEFINE_integer("num_steps", 100,
-                     "Number of optimization steps per epoch.")
-flags.DEFINE_integer("unroll_length", 20, "Meta-optimizer unroll length.")
-flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
-flags.DEFINE_boolean("second_derivatives", False, "Use second derivatives.")
+save_path = './test'
+num_epochs = 10000
+log_period = 10
+evaluation_period = 1000
+evaluation_epochs = 20
+problem = 'simple'
+num_steps = 100
+unroll_length = 100
+learning_rate = 0.001
+second_derivatives = False 
 
 
-def main(_):
-  # Configuration.
-  num_unrolls = FLAGS.num_steps // FLAGS.unroll_length
+## START PROGRAMM HERE
 
-  if FLAGS.save_path is not None:
-    if os.path.exists(FLAGS.save_path):
-      raise ValueError("Folder {} already exists".format(FLAGS.save_path))
-    else:
-      os.mkdir(FLAGS.save_path)
+# Configuration.
+num_unrolls = num_steps // unroll_length
 
-  # Problem.
-  problem, net_config, net_assignments = util.get_config(FLAGS.problem)
+if save_path is not None:
+    if os.path.exists(save_path):
+        raise ValueError("Folder {} already exists".format(save_path))
+else:
+    os.mkdir(save_path)
 
-  # Optimizer setup.
-  optimizer = meta.MetaOptimizer(**net_config)
-  minimize = optimizer.meta_minimize(
-      problem, FLAGS.unroll_length,
-      learning_rate=FLAGS.learning_rate,
-      net_assignments=net_assignments,
-      second_derivatives=FLAGS.second_derivatives)
-  step, update, reset, cost_op, _ = minimize
+# Problem.
+problem, net_config, net_assignments = util.get_config(problem)
 
-  with ms.MonitoredSession() as sess:
+# Optimizer setup.
+optimizer = meta.MetaOptimizer(**net_config)
+minimize = optimizer.meta_minimize(
+problem, unroll_length,
+learning_rate=learning_rate,
+net_assignments=net_assignments,
+second_derivatives=second_derivatives)
+step, update, reset, cost_op, _ = minimize
+
+with ms.MonitoredSession() as sess:
     # Prevent accidental changes to the graph.
     tf.get_default_graph().finalize()
-
+    
     best_evaluation = float("inf")
     total_time = 0
     total_cost = 0
-    for e in xrange(FLAGS.num_epochs):
-      # Training.
-      time, cost = util.run_epoch(sess, cost_op, [update, step], reset,
+    for e in xrange(num_epochs):
+        # Training.
+        time, cost = util.run_epoch(sess, cost_op, [update, step], reset,
                                   num_unrolls)
-      total_time += time
-      total_cost += cost
-
-      # Logging.
-      if (e + 1) % FLAGS.log_period == 0:
-        util.print_stats("Epoch {}".format(e + 1), total_cost, total_time,
-                         FLAGS.log_period)
+        total_time += time
+        total_cost += cost
+        
+        # Logging.
+        if (e + 1) % log_period == 0:
+            util.print_stats("Epoch {}".format(e + 1), total_cost, total_time,
+                         log_period)
         total_time = 0
         total_cost = 0
-
-      # Evaluation.
-      if (e + 1) % FLAGS.evaluation_period == 0:
-        eval_cost = 0
-        eval_time = 0
-        for _ in xrange(FLAGS.evaluation_epochs):
-          time, cost = util.run_epoch(sess, cost_op, [update], reset,
+        
+        # Evaluation.
+        if (e + 1) % evaluation_period == 0:
+            eval_cost = 0
+            eval_time = 0
+        for _ in xrange(evaluation_epochs):
+            time, cost = util.run_epoch(sess, cost_op, [update], reset,
                                       num_unrolls)
-          eval_time += time
-          eval_cost += cost
-
-        util.print_stats("EVALUATION", eval_cost, eval_time,
-                         FLAGS.evaluation_epochs)
-
-        if FLAGS.save_path is not None and eval_cost < best_evaluation:
-          print("Removing previously saved meta-optimizer")
-          for f in os.listdir(FLAGS.save_path):
-            os.remove(os.path.join(FLAGS.save_path, f))
-          print("Saving meta-optimizer to {}".format(FLAGS.save_path))
-          optimizer.save(sess, FLAGS.save_path)
-          best_evaluation = eval_cost
-
-
-if __name__ == "__main__":
-  tf.app.run()
+            eval_time += time
+            eval_cost += cost
+        
+            util.print_stats("EVALUATION", eval_cost, eval_time,
+                         evaluation_epochs)
+        
+        if save_path is not None and eval_cost < best_evaluation:
+            print("Removing previously saved meta-optimizer")
+            for f in os.listdir(save_path):
+                os.remove(os.path.join(save_path, f))
+                print("Saving meta-optimizer to {}".format(save_path))
+                optimizer.save(sess, save_path)
+                best_evaluation = eval_cost

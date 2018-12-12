@@ -75,6 +75,18 @@ def xx(inputsize_x=128, inputsize_y=128, inputsize_z=1):
         xx = np.transpose(xx, [1, 0, 2]) #???? why that?!
     return np.squeeze(xx)
 
+def xx_freq(inputsize_x=128, inputsize_y=128, inputsize_z=1):
+    x = np.arange(-inputsize_x/2,inputsize_x/2, 1)/inputsize_x
+    y = np.arange(-inputsize_y/2,inputsize_y/2, 1)/inputsize_x
+    if inputsize_z<=1:
+        xx, yy = np.meshgrid(x, y)
+        xx = np.transpose(xx, [1, 0]) #???? why that?!
+    else:
+        z = np.arange(-inputsize_z/2,inputsize_z/2, 1)/inputsize_x
+        xx, yy, zz = np.meshgrid(x, y, z)
+        xx = np.transpose(xx, [1, 0, 2]) #???? why that?!
+    return np.squeeze(xx)
+
 def yy(inputsize_x=128, inputsize_y=128, inputsize_z=1):
     x = np.arange(-inputsize_x/2,inputsize_x/2, 1)
     y = np.arange(-inputsize_y/2,inputsize_y/2, 1)
@@ -85,6 +97,18 @@ def yy(inputsize_x=128, inputsize_y=128, inputsize_z=1):
         z = np.arange(-inputsize_z/2,inputsize_z/2, 1)
         xx, yy, zz = np.meshgrid(x, y, z)
         yy = np.transpose(yy, [1, 0, 2]) #???? why that?!
+    return np.squeeze(yy)
+
+def yy_freq(inputsize_x=128, inputsize_y=128, inputsize_z=1):
+    x = np.arange(-inputsize_x/2,inputsize_x/2, 1)/inputsize_x
+    y = np.arange(-inputsize_y/2,inputsize_y/2, 1)/inputsize_x
+    if inputsize_z<=1:
+        xx, yy = np.meshgrid(x, y)
+        yy = np.transpose(yy, [1, 0]) #???? why that?!
+    else:
+        z = np.arange(-inputsize_z/2,inputsize_z/2, 1)/inputsize_x
+        xx, yy, zz = np.meshgrid(x, y, z)
+        yy = np.transpose(xx, [1, 0, 2]) #???? why that?!
     return np.squeeze(yy)
 
 def zz(inputsize_x=128, inputsize_y=128, inputsize_z=1):
@@ -203,6 +227,29 @@ def my_ift3d(tensor):
     Uses standard normalization of fft unlike dip_image.
     """
     return fftshift3d(tf.ifft3d(ifftshift3d(tensor)))
+
+def my_ft2d_np(numpy):
+    """
+    fftshift(fft(ifftshift(a)))
+    
+    Applies shifts to work with arrays whose "zero" is in the middle 
+    instead of the first element.
+    
+    Uses standard normalization of fft unlike dip_image.
+    """
+    return np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(numpy)))
+
+def my_ift2d_np(numpy):
+    """
+    fftshift(ifft(ifftshift(a)))
+    
+    Applies shifts to work with arrays whose "zero" is in the middle 
+    instead of the first element.
+    
+    Uses standard normalization of fft unlike dip_image.
+    """
+    return np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(numpy)))
+
 
 
 def my_ft3d_np(numpy):
@@ -364,6 +411,146 @@ def extract3D(input_matrix, newsize = ((300,300,300)), center=((-1,-1,-1))):
 
     return myimage_new
 
+class BPM:
+    ''' psi = SEAGLESolver(mysample, mySrc, myeps, k0, startPsi, showupdate) : solves the inhomogeneous SEAGLE equation
+    '''
+    
+    # initialize the SEAGLE operator
+    def __init__(self, uin, mysize=(512,512), lambda0=.6, sampling=(.1, .1, .15), nEmbb=1.33):
+        '''
+        uin - input field (2D)
+        myf - slice of refractive index (2D)
+        Nx - Num PIxel in X
+        Ny - Num PIxel in Y        
+        lambda0  - wavelenght in vacuum
+        pixelsize
+        '''
+        
+        # Convert sizes to dimensions 
+        self.nEmbb = nEmbb
+        self.Nx = mysize[0]
+        self.Ny = mysize[1]        
+        self.dx = sampling[0]
+        self.dy = sampling[1]
+        self.dz = sampling[2]
+      
+        # Define Wavenumber
+        self.lambda0 = lambda0
+        
+        # Compute wave-number in medium
+        self.k0 = 2*np.pi/self.lambda0;
+
+        if(False):
+            # Define Wavenumber
+            self.lambda0 = lambda0
+            
+            # Compute wave-number in medium
+            self.k0 = 2*np.pi/self.lambda0;
+            self.k = 1*self.k0; # medium wavenumber (1/m)
+    
+            Lx = self.Nx*self.dx; # length of computational window along x
+            Ly = self.Ny*self.dy; # length of computational window along y
+            
+            
+            x = np.transpose(self.dx*np.float32(range(int(-self.Nx/2+1),int(self.Nx/2+1)))); # computational grid along x (horiz)
+            y = np.transpose(self.dy*np.float32(range(int(-self.Ny/2+1),int(self.Ny/2+1)))); # computational grid along y (vert)
+            
+            [XX, YY] = np.meshgrid(x, y); #2D meshgrid
+            
+            dkx = 2*np.pi/Lx; # frequency discretization step along x
+            dky = 2*np.pi/Ly; # frequency discretization step along y
+            
+            
+            kx = np.transpose(dkx*np.float32(np.hstack((range(0,int(self.Nx/2)+1), range(int(-self.Nx/2),-1))))); # frequency grid along x
+            ky = np.transpose(dky*np.float32(np.hstack((range(0,int(self.Nx/2)+1), range(int(-self.Nx/2),-1))))); # frequency grid along y
+            kz = 2*np.pi*1; # frequency grid along z
+    
+    
+            [Kxx, Kyy] = np.meshgrid(kx, ky); # 2D frequency meshgrid
+            self.K2 = Kxx**2+Kyy**2; # frequency norm for all points
+            
+            self.dphi = np.real(self.K2/(self.k+np.sqrt(self.k**2-self.K2))); # diffraction phase factor
+            self.dphi = np.fft.fftshift(self.dphi); # bring center freq to the middle point 
+    
+    
+            [ixx , iyy] = np.meshgrid(range(1, self.Nx+1), range(1,self.Ny+1));
+            
+        else:
+            # define forward propagator
+            kxysqr=abssqr(xx(self.Nx, self.Ny, 1))/self.dx+abssqr(yy(self.Nx,self.Ny,1)/self.dy)
+            print(kxysqr.shape)
+            k0=1/self.lambda0;
+            kzsqr=abssqr(k0)-kxysqr;
+            kz=np.sqrt(kzsqr)
+            kz[kzsqr < 0]=0
+            self.dphi = 2*np.pi*kz*self.dz; # % exp(1i*kz*dz) would be the propagator for one slice
+            self.dphi = np.exp(1j*self.dphi) * (self.dphi >0)  # excludes the near field components in each step
+            
+            
+        #%% ##### TENSORFLOW STUFF - bring Fwd model to tensorflow
+        self.TF_uin = tf.constant(uin, tf.complex64)
+        self.TF_dphi = tf.constant(self.dphi, tf.complex64)
+
+        
+    def GetPupil(self, NA):
+        ## Establish normalized coordinates.
+        #Rsim = 0.5*self.Nx*self.dx
+        #Nx, Ny = np.floor((2*Rsim)/self.dx)+1; 
+        vxx=xx_freq(self.Nx, self.Ny, 0) * self.lambda0*self.nEmbb/(self.dx * NA)
+        vyy=yy_freq(self.Nx, self.Ny, 0)* self.lambda0*self.nEmbb/(self.dy * NA)
+        RelFreq = np.sqrt(abssqr(vxx)+abssqr(vyy))
+        self.Po=RelFreq < 1.0
+        return self.Po # Pupil function
+    
+    def Filter(self, inputfield, Po):
+        # Perform low-pass filtering of field 
+        print('the filtered result is now written to U_in in the class')
+        ufiltered = my_ift2d_np(my_ft2d_np(inputfield)*Po)
+        self.TF_uin = tf.Variable(ufiltered)
+        self.TF_uin = tf.cast(self.TF_uin, tf.complex64)
+        return ufiltered
+        
+    def PropagateStep(self, dz=1, myf=None):
+        
+        if(None is myf):
+            myf = np.zeros(self.TF_uin.getshape())
+            
+        # now apply a free-space propagation 
+        self.TF_myf = tf.Variable(myf) # my slice of refractive index
+        # need to cast for lower precision
+        self.TF_myf = tf.cast(self.TF_myf, tf.complex64) # this has to be optimized               
+        # multiply phase with incoming e-field 
+        self.TF_uin = self.TF_uin*tf.exp(1j*self.TF_myf); 
+
+        # now apply a free-space propagation 
+        self.TF_uin = my_ift2d(my_ft2d(self.TF_uin)*tf.exp(-1j*dz*self.TF_dphi)); # free-space propagator
+
+    
+    def ExecPropagation(self):
+        print('Initialize the BPM')
+        config = tf.ConfigProto()
+        jit_level = 0
+        if True:
+            # Turns on XLA JIT compilation.
+            jit_level = tf.OptimizerOptions.ON_1
+        else:
+            # Turns off XLA JIT compilation.
+            jit_level = tf.OptimizerOptions.OFF_1
+        config.graph_options.optimizer_options.global_jit_level = jit_level
+        self.run_metadata = tf.RunMetadata()
+  
+        # initialize Session object
+        if(False):
+            self.sess = tf.InteractiveSession(config=config)
+        else:
+            with tf.Session(config=config) as sess:        
+                print('Initialize operands') 
+                tf.global_variables_initializer().run()
+                print('Compute Result')        
+                u_out = sess.run(self.TF_uin)
+        return u_out
+    
+    
 
 class SEAGLE:
     ''' psi = SEAGLESolver(mysample, mySrc, myeps, k0, startPsi, showupdate) : solves the inhomogeneous SEAGLE equation
