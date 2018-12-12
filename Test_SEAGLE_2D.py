@@ -13,6 +13,7 @@ import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+tf.reset_default_graph()
 # %load_ext autoreload
 # %reload_ext autoreload
 
@@ -24,17 +25,17 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
        
 # Define some parameters
 is_debug = True # do you want to display everything?
-learningrate = .1 
-Niter = 20 # Optimization Steps
+learningrate = .01 
+Niter = 400 # Optimization Steps
 
-mysize = (100, 1, 100) # Z X Y
+mysize = (100, 4, 100) # Z X Y
 mymidpoint = int(mysize[1]/2)
 mysample = np.zeros(mysize)
 
 nObj = 1.4
 nEmbb = 1.33
 #nObj = 1.52 + 0.0 * 1j;
-Boundary=9;
+Boundary=15;
 
 lambda0 = .5; # measured in µm
 pixelsize = lambda0/4
@@ -44,10 +45,10 @@ pixelsize = lambda0/4
 mysample = seagle.insertSphere((mysample.shape[0], mysample.shape[1], mysample.shape[2]), obj_dim=0.1, obj_type=0, diameter=1, dn=1) 
 
 # define the source and insert it in the volume
-kx = 0
-ky = 0
+kx = .0
+ky = 0.2
 myWidth = 20;
-mySrc = seagle.insertSrc(mysize, myWidth, myOff=(Boundary+1, 0, 0), kx=kx,ky=ky);
+mySrc = seagle.insertSrc(mysize, myWidth, myOff=(Boundary+10, 0, 0), kx=kx,ky=ky);
 
 #%-----------------------------------------------------------------------------
 #                  SEAGLE PART COMES  HERE                                    #

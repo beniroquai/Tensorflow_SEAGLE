@@ -27,6 +27,11 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import sonnet as snt
 import tensorflow as tf
 
+
+sys.path.append("..") # Adds higher directory to python modules path.
+import SEAGLE as seagle
+import numpy as np 
+
 from tensorflow.contrib.learn.python.learn.datasets import mnist as mnist_dataset
 
 
@@ -275,3 +280,54 @@ def cifar10(path,  # pylint: disable=invalid-name
     return _xent_loss(output, label_batch)
 
   return build
+
+
+
+
+def SEAGLE(mode="train"):
+    """Solve the Lippmann-Schwinger Equation"""       
+    # Define some parameters
+    learningrate = .01 
+    Niter = 400 # Optimization Steps
+    
+    mysize = (100, 4, 100) # Z X Y
+    mysample = np.zeros(mysize)
+    
+    nObj = 1.4
+    nEmbb = 1.33
+    #nObj = 1.52 + 0.0 * 1j;
+    Boundary=15;
+    
+    lambda0 = .5; # measured in µm
+    pixelsize = lambda0/4
+
+    # generate Sample, Assume nObj everywhere where mysample is 1, rest is background 
+    mysample = seagle.insertSphere((mysample.shape[0], mysample.shape[1], mysample.shape[2]), obj_dim=0.1, obj_type=0, diameter=1, dn=1) 
+    
+    # define the source and insert it in the volume
+    mySrc = seagle.insertSrc(mysize, myWidth=20, myOff=(Boundary+10, 0, 0), kx=.0,ky=.0);
+    
+    #%-----------------------------------------------------------------------------
+    #                  SEAGLE PART COMES  HERE                                    #
+    #%-----------------------------------------------------------------------------
+    
+    # Instantiate the SEAGLE
+    MySEAGLE = seagle.SEAGLE(mysample, mySrc, lambda0=lambda0, pixelsize=pixelsize, nObj = nObj, nEmbb=nEmbb, Boundary=Boundary)
+    
+   
+    def build():     
+        # Compute the model inside the convergent born series 
+        MySEAGLE.computeModel()
+
+        # Define Minimization step
+        # MySEAGLE.minimize(learningrate)
+        
+        # Initialize all operands
+        # MySEAGLE.compileGraph() we don't want to do that here
+
+        # We want to minimize: MySEAGLE.sess.run([MySEAGLE.my_error])
+        # Trainable Variables: self.tf_u_imag, self.tf_u_real    
+        print(MySEAGLE.my_error)
+        return MySEAGLE.my_error
+
+    return build

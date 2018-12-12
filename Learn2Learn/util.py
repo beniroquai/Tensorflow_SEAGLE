@@ -61,68 +61,77 @@ def get_default_net_config(name, path):
 
 
 def get_config(problem_name, path=None):
-  """Returns problem configuration."""
-  if problem_name == "simple":
-    problem = problems.simple()
-    net_config = {"cw": {
-        "net": "CoordinateWiseDeepLSTM",
-        "net_options": {"layers": (), "initializer": "zeros"},
-        "net_path": get_net_path("cw", path)
-    }}
-    net_assignments = None
-  elif problem_name == "simple-multi":
-    problem = problems.simple_multi_optimizer()
-    net_config = {
-        "cw": {
+    """Returns problem configuration."""
+    if problem_name == "simple":
+        problem = problems.simple()
+        net_config = {"cw": {
             "net": "CoordinateWiseDeepLSTM",
             "net_options": {"layers": (), "initializer": "zeros"},
             "net_path": get_net_path("cw", path)
-        },
-        "adam": {
-            "net": "Adam",
-            "net_options": {"learning_rate": 0.1}
+        }}
+        net_assignments = None
+    elif problem_name == "simple-multi":
+        problem = problems.simple_multi_optimizer()
+        net_config = {
+            "cw": {
+                "net": "CoordinateWiseDeepLSTM",
+                "net_options": {"layers": (), "initializer": "zeros"},
+                "net_path": get_net_path("cw", path)
+            },
+            "adam": {
+                "net": "Adam",
+                "net_options": {"learning_rate": 0.1}
+            }
         }
-    }
-    net_assignments = [("cw", ["x_0"]), ("adam", ["x_1"])]
-  elif problem_name == "quadratic":
-    problem = problems.quadratic(batch_size=128, num_dims=10)
-    net_config = {"cw": {
-        "net": "CoordinateWiseDeepLSTM",
-        "net_options": {"layers": (20, 20)},
-        "net_path": get_net_path("cw", path)
-    }}
-    net_assignments = None
-  elif problem_name == "mnist":
-    mode = "train" if path is None else "test"
-    problem = problems.mnist(layers=(20,), mode=mode)
-    net_config = {"cw": get_default_net_config("cw", path)}
-    net_assignments = None
-  elif problem_name == "cifar":
-    mode = "train" if path is None else "test"
-    problem = problems.cifar10("cifar10",
-                               conv_channels=(16, 16, 16),
-                               linear_layers=(32,),
-                               mode=mode)
-    net_config = {"cw": get_default_net_config("cw", path)}
-    net_assignments = None
-  elif problem_name == "cifar-multi":
-    mode = "train" if path is None else "test"
-    problem = problems.cifar10("cifar10",
-                               conv_channels=(16, 16, 16),
-                               linear_layers=(32,),
-                               mode=mode)
-    net_config = {
-        "conv": get_default_net_config("conv", path),
-        "fc": get_default_net_config("fc", path)
-    }
-    conv_vars = ["conv_net_2d/conv_2d_{}/w".format(i) for i in xrange(3)]
-    fc_vars = ["conv_net_2d/conv_2d_{}/b".format(i) for i in xrange(3)]
-    fc_vars += ["conv_net_2d/batch_norm_{}/beta".format(i) for i in xrange(3)]
-    fc_vars += ["mlp/linear_{}/w".format(i) for i in xrange(2)]
-    fc_vars += ["mlp/linear_{}/b".format(i) for i in xrange(2)]
-    fc_vars += ["mlp/batch_norm/beta"]
-    net_assignments = [("conv", conv_vars), ("fc", fc_vars)]
-  else:
-    raise ValueError("{} is not a valid problem".format(problem_name))
+        net_assignments = [("cw", ["x_0"]), ("adam", ["x_1"])]
+    elif problem_name == "quadratic":
+        problem = problems.quadratic(batch_size=128, num_dims=10)
+        net_config = {"cw": {
+            "net": "CoordinateWiseDeepLSTM",
+            "net_options": {"layers": (20, 20)},
+            "net_path": get_net_path("cw", path)
+        }}
+        net_assignments = None
+    elif problem_name == "mnist":
+        mode = "train" if path is None else "test"
+        problem = problems.mnist(layers=(20,), mode=mode)
+        net_config = {"cw": get_default_net_config("cw", path)}
+        net_assignments = None
+    elif problem_name == "cifar":
+        mode = "train" if path is None else "test"
+        problem = problems.cifar10("cifar10",
+                                   conv_channels=(16, 16, 16),
+                                   linear_layers=(32,),
+                                   mode=mode)
+        net_config = {"cw": get_default_net_config("cw", path)}
+        net_assignments = None
 
-  return problem, net_config, net_assignments
+    # -------------------------------------------------------------------------          
+    # TESTING our own algorithm - makes any sense?
+    elif problem_name == "SEAGLE":
+        mode = "train" if path is None else "test"
+        problem = problems.SEAGLE(mode=mode)
+        net_config = {"cw": get_default_net_config("cw", path)}
+        net_assignments = None
+    # -------------------------------------------------------------------------
+    elif problem_name == "cifar-multi":
+        mode = "train" if path is None else "test"
+        problem = problems.cifar10("cifar10",
+                                   conv_channels=(16, 16, 16),
+                                   linear_layers=(32,),
+                                   mode=mode)
+        net_config = {
+            "conv": get_default_net_config("conv", path),
+            "fc": get_default_net_config("fc", path)
+        }
+        conv_vars = ["conv_net_2d/conv_2d_{}/w".format(i) for i in xrange(3)]
+        fc_vars = ["conv_net_2d/conv_2d_{}/b".format(i) for i in xrange(3)]
+        fc_vars += ["conv_net_2d/batch_norm_{}/beta".format(i) for i in xrange(3)]
+        fc_vars += ["mlp/linear_{}/w".format(i) for i in xrange(2)]
+        fc_vars += ["mlp/linear_{}/b".format(i) for i in xrange(2)]
+        fc_vars += ["mlp/batch_norm/beta"]
+        net_assignments = [("conv", conv_vars), ("fc", fc_vars)]
+    else:
+        raise ValueError("{} is not a valid problem".format(problem_name))
+        
+    return problem, net_config, net_assignments

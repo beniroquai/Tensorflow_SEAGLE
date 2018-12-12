@@ -43,7 +43,7 @@ def rr(inputsize_x=100, inputsize_y=100, inputsize_z=100, x_center=0, y_center =
         r = np.sqrt(xx**2+yy**2+zz**2)
         r = np.transpose(r, [1, 0, 2]) #???? why that?!
         
-    return np.squeeze(r)
+    return (r)
 
 def rr_freq(inputsize_x=100, inputsize_y=100, inputsize_z=100, x_center=0, y_center = 0, z_center=0):
     x = np.linspace(-inputsize_x/2,inputsize_x/2, inputsize_x)/inputsize_x
@@ -60,7 +60,7 @@ def rr_freq(inputsize_x=100, inputsize_y=100, inputsize_z=100, x_center=0, y_cen
         r = np.transpose(r, [1, 0, 2]) #???? why that?!
 
         
-    return np.squeeze(r)
+    return (r)
 
 
 def xx(inputsize_x=128, inputsize_y=128, inputsize_z=1):
@@ -73,7 +73,7 @@ def xx(inputsize_x=128, inputsize_y=128, inputsize_z=1):
         z = np.arange(-inputsize_z/2,inputsize_z/2, 1)
         xx, yy, zz = np.meshgrid(x, y, z)
         xx = np.transpose(xx, [1, 0, 2]) #???? why that?!
-    return np.squeeze(xx)
+    return (xx)
 
 def xx_freq(inputsize_x=128, inputsize_y=128, inputsize_z=1):
     x = np.arange(-inputsize_x/2,inputsize_x/2, 1)/inputsize_x
@@ -85,7 +85,7 @@ def xx_freq(inputsize_x=128, inputsize_y=128, inputsize_z=1):
         z = np.arange(-inputsize_z/2,inputsize_z/2, 1)/inputsize_x
         xx, yy, zz = np.meshgrid(x, y, z)
         xx = np.transpose(xx, [1, 0, 2]) #???? why that?!
-    return np.squeeze(xx)
+    return (xx)
 
 def yy(inputsize_x=128, inputsize_y=128, inputsize_z=1):
     x = np.arange(-inputsize_x/2,inputsize_x/2, 1)
@@ -97,7 +97,7 @@ def yy(inputsize_x=128, inputsize_y=128, inputsize_z=1):
         z = np.arange(-inputsize_z/2,inputsize_z/2, 1)
         xx, yy, zz = np.meshgrid(x, y, z)
         yy = np.transpose(yy, [1, 0, 2]) #???? why that?!
-    return np.squeeze(yy)
+    return (yy)
 
 def yy_freq(inputsize_x=128, inputsize_y=128, inputsize_z=1):
     x = np.arange(-inputsize_x/2,inputsize_x/2, 1)/inputsize_x
@@ -109,7 +109,7 @@ def yy_freq(inputsize_x=128, inputsize_y=128, inputsize_z=1):
         z = np.arange(-inputsize_z/2,inputsize_z/2, 1)/inputsize_x
         xx, yy, zz = np.meshgrid(x, y, z)
         yy = np.transpose(xx, [1, 0, 2]) #???? why that?!
-    return np.squeeze(yy)
+    return (yy)
 
 def zz(inputsize_x=128, inputsize_y=128, inputsize_z=1):
     nx = np.arange(-inputsize_x/2,inputsize_x/2, 1)
@@ -666,10 +666,20 @@ class SEAGLE:
         self.tf_u_in = tf.constant(self.u_in, tf.complex64)
         # self.myMask = tf.constant(self.myMask)
         
-        # Initialize field with the input field
-        self.tf_u_real = tf.Variable(np.real(self.u_in))
-        self.tf_u_imag = tf.Variable(np.imag(self.u_in))
-        self.tf_u = tf.complex(self.tf_u_real, self.tf_u_imag)
+        if(True):
+            # Initialize field with the input field
+            tf_u_real = tf.get_variable("tf_u_real",
+                                             shape=self.u_in.shape,
+                                             dtype=tf.float32,
+                                             initializer=tf.constant_initializer(np.real(self.u_in)))
+            tf_u_imag = tf.get_variable("tf_u_imag",
+                                             shape=self.u_in.shape,
+                                             dtype=tf.float32,
+                                             initializer=tf.constant_initializer(np.imag(self.u_in)))
+        else:          
+            tf_u_real = tf.Variable(np.real(self.u_in))
+            tf_u_imag = tf.Variable(np.imag(self.u_in))
+        self.tf_u = tf.complex(tf_u_real, tf_u_imag)
         self.tf_u = tf.cast(self.tf_u, tf.complex64)
         
         # Cast to float32/complex64 to save memory
@@ -698,6 +708,10 @@ class SEAGLE:
         # In order to get tf_u_d we need to minimize self.tf_u_d 
         # 1/2 * ||Au - uin||^2_2
         self.my_error = 1/2*tf_abssqr(self.tf_u_d)
+
+        print('Define Cost-Function ')
+        self.my_error = 1/2 * tf.reduce_mean(tf_abssqr(self.tf_u_d))
+        self.my_error = tf.cast(self.my_error, tf.float32)
         
          # op to write logs to Tensorboard
         # self.summary_writer = tf.summary.FileWriter(self.logs_path, graph=tf.get_default_graph())
@@ -706,10 +720,7 @@ class SEAGLE:
             
     def minimize(self, my_lr=0.01):
         # here we try to minimize our error function using Gradient Descent - will take long probably..
-        print('Define Cost-Function and Optimizer')
-        self.my_error = 1/2 * tf.reduce_mean(tf_abssqr(self.tf_u_d))
-        self.my_error = tf.cast(self.my_error, tf.float32)
-        
+        print('Define Optimizer')
         #my_optimizer = tf.train.AdamOptimizer(my_lr)
         my_optimizer = tf.train.AdamOptimizer(my_lr)
         self.train_op = my_optimizer.minimize(self.my_error)

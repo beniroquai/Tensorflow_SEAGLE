@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 """Learning 2 Learn training."""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -31,18 +30,20 @@ import util
 flags = tf.flags
 logging = tf.logging
 
+tf.reset_default_graph()
 
-save_path = './test'
-num_epochs = 10000
+
+save_path = './testseagle'
+num_epochs = 100000
 log_period = 10
 evaluation_period = 1000
 evaluation_epochs = 20
-problem = 'simple'
+problem = 'SEAGLE'#'simple'#
 num_steps = 100
 unroll_length = 100
 learning_rate = 0.001
 second_derivatives = False 
-
+eval_cost = 0
 
 ## START PROGRAMM HERE
 
@@ -50,10 +51,11 @@ second_derivatives = False
 num_unrolls = num_steps // unroll_length
 
 if save_path is not None:
-    if os.path.exists(save_path):
-        raise ValueError("Folder {} already exists".format(save_path))
-else:
-    os.mkdir(save_path)
+    if ~os.path.exists(save_path):
+        try:
+            os.mkdir(save_path)
+        except(FileExistsError):
+            print('Dir exist!')
 
 # Problem.
 problem, net_config, net_assignments = util.get_config(problem)
@@ -61,10 +63,10 @@ problem, net_config, net_assignments = util.get_config(problem)
 # Optimizer setup.
 optimizer = meta.MetaOptimizer(**net_config)
 minimize = optimizer.meta_minimize(
-problem, unroll_length,
-learning_rate=learning_rate,
-net_assignments=net_assignments,
-second_derivatives=second_derivatives)
+    problem, unroll_length,
+    learning_rate=learning_rate,
+    net_assignments=net_assignments,
+    second_derivatives=second_derivatives)
 step, update, reset, cost_op, _ = minimize
 
 with ms.MonitoredSession() as sess:
@@ -92,19 +94,18 @@ with ms.MonitoredSession() as sess:
         if (e + 1) % evaluation_period == 0:
             eval_cost = 0
             eval_time = 0
-        for _ in xrange(evaluation_epochs):
-            time, cost = util.run_epoch(sess, cost_op, [update], reset,
-                                      num_unrolls)
-            eval_time += time
-            eval_cost += cost
-        
+            for _ in xrange(evaluation_epochs):
+                time, cost = util.run_epoch(sess, cost_op, [update], reset,
+                                          num_unrolls)
+                eval_time += time
+                eval_cost += cost
+            
             util.print_stats("EVALUATION", eval_cost, eval_time,
-                         evaluation_epochs)
+                             evaluation_epochs)
         
         if save_path is not None and eval_cost < best_evaluation:
             print("Removing previously saved meta-optimizer")
-            for f in os.listdir(save_path):
-                os.remove(os.path.join(save_path, f))
-                print("Saving meta-optimizer to {}".format(save_path))
-                optimizer.save(sess, save_path)
-                best_evaluation = eval_cost
+            #os.remove(os.path.join(save_path, f))
+            print("Saving meta-optimizer to {}".format(save_path))
+            optimizer.save(sess, save_path)
+            best_evaluation = eval_cost
