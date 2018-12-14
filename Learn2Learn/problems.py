@@ -57,7 +57,7 @@ def simple():
   return build
 
 
-def deconv():
+def deconv(mode="train"):
     """Simple deconv problem: f(x) = |Ax-B|^2+TV(x)"""
     # example for simple deconv        
     myDeconv = sdeconv.simple_deconv()

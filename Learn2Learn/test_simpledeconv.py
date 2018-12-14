@@ -90,8 +90,13 @@ class simple_deconv(object):
 
     def ComputeSystem(self):
         # tensorflow stuff
+        # Initialize field with the input field
+        tf_guess = tf.get_variable("tf_guess",
+                                         shape=self.img_base.shape,
+                                         dtype=tf.float32,
+                                         initializer=tf.constant_initializer(np.mean(self.img_base)))
+    
         self.tf_img = tf.constant(self.img_base)
-        tf_guess = tf.Variable(np.float32(np.ones(self.img_base.shape)*np.mean(self.img_base)))
         self.tf_guess_cmplx = tf.complex(tf_guess, 0*tf_guess)
         self.tf_meas = tf.cast(tf.constant(self.mymeas), tf.float32)
         tf_pupil = tf.constant(1.*self.myaperture)
