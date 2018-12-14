@@ -120,7 +120,7 @@ def get_config(problem_name, path=None):
     # TESTING our own algorithm - makes any sense?
     elif problem_name == "deconv":
         mode = "train" if path is None else "test"
-        problem = problems.SEAGLE(mode=mode)
+        problem = problems.deconv(mode=mode)
         net_config = {"cw": get_default_net_config("cw", path)}
         net_assignments = None
         
