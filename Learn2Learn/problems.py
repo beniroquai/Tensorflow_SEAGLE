@@ -26,11 +26,12 @@ from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import sonnet as snt
 import tensorflow as tf
-
+import numpy as np 
 
 sys.path.append("..") # Adds higher directory to python modules path.
 import SEAGLE as seagle
-import numpy as np 
+
+import test_simpledeconv as sdeconv
 
 from tensorflow.contrib.learn.python.learn.datasets import mnist as mnist_dataset
 
@@ -54,6 +55,21 @@ def simple():
     return tf.square(x, name="x_squared")
 
   return build
+
+
+def deconv():
+    """Simple deconv problem: f(x) = |Ax-B|^2+TV(x)"""
+    # example for simple deconv        
+    myDeconv = sdeconv.simple_deconv()
+    def build():
+        """Builds loss graph."""
+        myDeconv.ComputeSystem()
+        cost, val = myDeconv.FwdSystem()
+        return cost
+
+    return build
+
+
 
 
 def simple_multi_optimizer(num_dims=2):

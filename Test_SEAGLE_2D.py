@@ -32,7 +32,7 @@ mysize = (100, 4, 100) # Z X Y
 mymidpoint = int(mysize[1]/2)
 mysample = np.zeros(mysize)
 
-nObj = 1.4
+nObj = 1.5
 nEmbb = 1.33
 #nObj = 1.52 + 0.0 * 1j;
 Boundary=15;

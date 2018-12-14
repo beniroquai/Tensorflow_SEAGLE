@@ -20,39 +20,48 @@ from __future__ import print_function
 
 from six.moves import xrange
 import tensorflow as tf
-
+import matplotlib.pyplot as plt
+import numpy as np
 from tensorflow.contrib.learn.python.learn import monitored_session as ms
 
 import meta
 import util
 
+
+tf.reset_default_graph()
+
 flags = tf.flags
 logging = tf.logging
 
 
-path = './test'
-num_epochs = 100
+path = './testseagle'
+num_epochs = 2
 log_period = 10
 evaluation_period = 1000
 evaluation_epochs = 20
-problem = 'simple'
-num_steps = 100
-unroll_length = 100
-learning_rate = 0.001
+problem = 'SEAGLE'
+
+learning_rate = 0.1
 second_derivatives = False 
-optimizer = 'L2L'
-seed = None
+if(False):
+    optimizer = 'Adam'#'L2L'
+    learning_rate = 0.1
+    num_steps = 20
 
+else:
+    num_steps = 100
+    optimizer = 'L2L'
+    seed = None
+    num_epochs = 1
+    num_unrolls = 50
 
-
-# Configuration.
-num_unrolls = num_steps
 
 if seed:
     tf.set_random_seed(seed)
 
 # Problem.
 problem, net_config, net_assignments = util.get_config(problem, path)
+
 
 # Optimizer setup.
 if optimizer == "Adam":
@@ -62,7 +71,7 @@ if optimizer == "Adam":
 
     optimizer = tf.train.AdamOptimizer(learning_rate)
     optimizer_reset = tf.variables_initializer(optimizer.get_slot_names())
-    update = optimizer.minimize(cost_op)
+    update = optimizer.minimize(cost_op) # argmin(*)
     reset = [problem_reset, optimizer_reset]
 
 elif optimizer == "L2L":
@@ -70,24 +79,33 @@ elif optimizer == "L2L":
         logging.warning("Evaluating untrained L2L optimizer")
     optimizer = meta.MetaOptimizer(**net_config)
     meta_loss = optimizer.meta_loss(problem, 1, net_assignments=net_assignments)
-    _, update, reset, cost_op, _ = meta_loss
+    _, update, reset, cost_op, problem_vars = meta_loss
 
 else:
     raise ValueError("{} is not a valid optimizer".format(optimizer))
 
-with ms.MonitoredSession() as sess:
-    # Prevent accidental changes to the graph.
-    tf.get_default_graph().finalize()
+sess = ms.MonitoredSession()# as sess:
+# Prevent accidental changes to the graph.
+tf.get_default_graph().finalize()
 
-    total_time = 0
-    total_cost = 0
-    for _ in xrange(num_epochs):
-        # Training.
-        time, cost = util.run_epoch(sess, cost_op, [update], reset,
-                          num_unrolls)
-        total_time += time
-        total_cost += cost
+total_time = 0
+total_cost = 0
+
+for i in xrange(num_epochs):
+    # Training.
+    time, cost, problem_res = util.run_epoch_test(sess, cost_op, problem_vars, [update], reset, num_unrolls)
+    total_time += time
+    total_cost += cost
+    print('Cost at Iteration: '+str(i)+' is: '+str(total_cost))
 
 # Results.
 util.print_stats("Epoch {}".format(num_epochs), total_cost,
              total_time, num_epochs)
+
+
+#%% print the results 
+# not quiet clear how the shaping is done..
+# e.g. problem_res.shape = (20, 2, 100, 4, 100) # (nsteps, (real/imag), nx, nz, ny) - > REAL/IMAG are two seperate variables which we try to optimize here 
+for i in range(problem_res.shape[0]):
+    mycurrent_result = np.abs(problem_res[i,0,:,1,:]+1j*problem_res[i,1,:,1,:])
+    plt.imshow(np.abs(np.squeeze(mycurrent_result))), plt.show()

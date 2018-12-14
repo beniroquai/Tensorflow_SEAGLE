@@ -33,14 +33,14 @@ logging = tf.logging
 tf.reset_default_graph()
 
 
-save_path = './testseagle'
+save_path = './testdeconv' #'./testseagle'
 num_epochs = 100000
 log_period = 10
 evaluation_period = 1000
-evaluation_epochs = 20
-problem = 'SEAGLE'#'simple'#
-num_steps = 100
-unroll_length = 100
+evaluation_epochs = 1
+problem = 'deconv'# 'SEAGLE'#'simple'#
+num_steps = 100 # number of steps the optimizer should train the optmizee (a new random function will be updated for num_steps in each epoch)
+unroll_length = 100 # number of steps after which the optimizer gets updated 
 learning_rate = 0.001
 second_derivatives = False 
 eval_cost = 0
@@ -78,8 +78,7 @@ with ms.MonitoredSession() as sess:
     total_cost = 0
     for e in xrange(num_epochs):
         # Training.
-        time, cost = util.run_epoch(sess, cost_op, [update, step], reset,
-                                  num_unrolls)
+        time, cost = util.run_epoch(sess, cost_op, [update, step], reset, num_unrolls)
         total_time += time
         total_cost += cost
         

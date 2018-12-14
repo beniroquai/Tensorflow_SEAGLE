@@ -27,6 +27,17 @@ from six.moves import xrange
 import problems
 
 
+def run_epoch_test(sess, cost_op, x_op, ops, reset, num_unrolls):
+  """Runs one optimization epoch."""
+  start = timer()
+  sess.run(reset)
+  x_value_list = []
+  for _ in xrange(num_unrolls):
+    cost, x_value = sess.run([cost_op, x_op] + ops)[0:2]
+    x_value_list.append(x_value)
+  x_values = np.array(x_value_list)
+  return timer() - start, cost, x_values
+
 def run_epoch(sess, cost_op, ops, reset, num_unrolls):
   """Runs one optimization epoch."""
   start = timer()
@@ -105,7 +116,14 @@ def get_config(problem_name, path=None):
                                    mode=mode)
         net_config = {"cw": get_default_net_config("cw", path)}
         net_assignments = None
-
+    # -------------------------------------------------------------------------          
+    # TESTING our own algorithm - makes any sense?
+    elif problem_name == "deconv":
+        mode = "train" if path is None else "test"
+        problem = problems.SEAGLE(mode=mode)
+        net_config = {"cw": get_default_net_config("cw", path)}
+        net_assignments = None
+        
     # -------------------------------------------------------------------------          
     # TESTING our own algorithm - makes any sense?
     elif problem_name == "SEAGLE":
