@@ -131,7 +131,7 @@ def get_config(problem_name, path=None):
         problem = problems.SEAGLE(mode=mode)
         net_config = net_config = {"cw": {
             "net": "CoordinateWiseDeepLSTM",
-            "net_options": {"layers": (40, 40), "preprocess_options": {"k": 5}},
+            "net_options": {"layers": (20, 20), "preprocess_options": {"k": 3}, "scale": 0.1},
             "net_path": get_net_path("cw", path)
         }}#{"cw": get_default_net_config("cw", path)}
         net_assignments = None
