@@ -33,12 +33,12 @@ logging = tf.logging
 tf.reset_default_graph()
 
 
-save_path = './testdeconv' #'./testseagle'
+save_path = './testseagle' #'./testdeconv' 
 num_epochs = 100000
 log_period = 10
 evaluation_period = 1000
 evaluation_epochs = 1
-problem = 'deconv'# 'SEAGLE'#'simple'#
+problem = 'SEAGLE'# 'SEAGLE'#'deconv'#
 num_steps = 100 # number of steps the optimizer should train the optmizee (a new random function will be updated for num_steps in each epoch)
 unroll_length = 100 # number of steps after which the optimizer gets updated 
 learning_rate = 0.001

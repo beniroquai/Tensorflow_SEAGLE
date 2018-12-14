@@ -129,7 +129,11 @@ def get_config(problem_name, path=None):
     elif problem_name == "SEAGLE":
         mode = "train" if path is None else "test"
         problem = problems.SEAGLE(mode=mode)
-        net_config = {"cw": get_default_net_config("cw", path)}
+        net_config = net_config = {"cw": {
+            "net": "CoordinateWiseDeepLSTM",
+            "net_options": {"layers": (40, 40), "preprocess_options": {"k": 5}},
+            "net_path": get_net_path("cw", path)
+        }}#{"cw": get_default_net_config("cw", path)}
         net_assignments = None
     # -------------------------------------------------------------------------
     elif problem_name == "cifar-multi":
