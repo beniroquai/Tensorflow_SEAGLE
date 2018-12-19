@@ -18,16 +18,16 @@ def factorial(n):
         return 1
     else:
         return n * factorial(n-1)
-    
-def tf_abssqr(inputar):
-    return tf.real(inputar*tf.conj(inputar))
-    #return tf.abs(inputar)**2
 
 def save(filename, numpyarray):
     import scipy.io
     data = {}
     data['numpyarray'] = numpyarray
     scipy.io.savemat(filename, mdict=data)
+    
+def tf_abssqr(inputar):
+    return tf.real(inputar*tf.conj(inputar))
+    #return tf.abs(inputar)**2
 
 def rr(inputsize_x=100, inputsize_y=100, inputsize_z=100, x_center=0, y_center = 0, z_center=0):
     x = np.arange(-inputsize_x/2,inputsize_x/2, 1)
